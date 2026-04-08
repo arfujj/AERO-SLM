@@ -1,4 +1,4 @@
-# AeroSLM
+# AeroSLM - under construction
 
 AeroSLM is a physics-aware CFD diagnostic copilot MVP. A user uploads a text solver log, adds simulation context, asks a troubleshooting question, and receives a structured diagnosis report with parsed evidence, residual analysis, retrieved engineering references, validation flags, and recommended next actions.
 
