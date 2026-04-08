@@ -1,0 +1,23 @@
+{
+  "name": "@aeroslm/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --import tsx src/index.ts",
+    "start": "node dist/apps/server/src/index.js",
+    "build": "tsc -p tsconfig.json",
+    "check": "tsc -p tsconfig.json --noEmit",
+    "test": "node --import tsx --test src/parsing/solverLogParser.test.ts src/diagnosis/residualAnalysis.test.ts src/diagnosis/diagnosisAssembler.test.ts src/retrieval/knowledgeRetriever.test.ts src/validation/physicsValidation.test.ts"
+  },
+  "dependencies": {
+    "@aeroslm/shared": "*",
+    "cors": "^2.8.5",
+    "express": "^4.21.2"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.1",
+    "tsx": "^4.19.3"
+  }
+}
