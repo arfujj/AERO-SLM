@@ -90,17 +90,6 @@ Start both the frontend and backend:
 npm run dev
 ```
 
-Local URLs:
-- Frontend: [http://localhost:5173](http://localhost:5173)
-- API health: [http://localhost:8787/api/health](http://localhost:8787/api/health)
-- Admin/Debug: [http://localhost:5173/admin/debug](http://localhost:5173/admin/debug)
-
-Useful routes:
-- Landing: [http://localhost:5173/](http://localhost:5173/)
-- New Diagnosis: [http://localhost:5173/diagnose/new](http://localhost:5173/diagnose/new)
-- History: [http://localhost:5173/history](http://localhost:5173/history)
-- Demo report: [http://localhost:5173/results/demo](http://localhost:5173/results/demo)
-
 Verification commands:
 
 ```bash
