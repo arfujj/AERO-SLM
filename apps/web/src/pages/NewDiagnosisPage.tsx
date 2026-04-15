@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import type { DiagnosePayload } from "@aeroslm/shared";
 import { PageHeader } from "../components/PageHeader";
+import { StatusBadge } from "../components/StatusBadge";
 import {
   analyzeLogContent,
   buildFilePreview,
@@ -46,6 +47,22 @@ export function NewDiagnosisPage() {
   const parsingPreview = analyzeLogContent(payload.logFile.content);
   const filePreview = buildFilePreview(payload.logFile.content);
   const canSubmit = !hasFormErrors(formErrors) && !isSubmitting;
+  const missingRequiredFields = Object.entries(formErrors)
+    .filter(([, message]) => Boolean(message))
+    .map(([field]) => {
+      switch (field) {
+        case "solverName":
+          return "solver";
+        case "caseDescription":
+          return "case";
+        case "question":
+          return "question";
+        case "logFile":
+          return "file";
+        default:
+          return field;
+      }
+    });
 
   useEffect(() => {
     const prefills = (location.state as { draftPayload?: DiagnosePayload } | null)?.draftPayload;
@@ -177,157 +194,206 @@ export function NewDiagnosisPage() {
   }
 
   const parsingToneClass = useMemo(() => {
-    if (parsingPreview.status === "error") return "status-failed";
-    if (parsingPreview.status === "warning") return "status-unstable";
-    return "status-completed";
+    if (parsingPreview.status === "error") return "status-danger";
+    if (parsingPreview.status === "warning") return "status-warning";
+    if (parsingPreview.status === "ready") return "status-success";
+    return "status-neutral";
   }, [parsingPreview.status]);
+
+  const executionStatus = isSubmitting ? "processing" : canSubmit ? "completed" : "draft";
+  const fileStatus = payload.logFile.content ? "completed" : "draft";
+  const parserStatus =
+    parsingPreview.status === "awaiting_upload"
+      ? "draft"
+      : parsingPreview.status === "error"
+        ? "failed"
+        : parsingPreview.status === "warning"
+          ? "unstable"
+          : "completed";
+  const readinessMessage = isSubmitting
+    ? "Diagnosis workflow is running."
+    : canSubmit
+      ? "All required inputs are present."
+      : `Missing: ${missingRequiredFields.join(", ")}.`;
 
   return (
     <div className="stack">
       <PageHeader
         title="New diagnosis"
-        description="Set up the case, attach a solver log, and run the diagnostic workflow."
+        description="Enter case inputs, attach a solver log, and run the diagnostic workflow."
       />
 
       <form className="diagnosis-layout" onSubmit={handleSubmit}>
-        <section className="panel stack">
+        <section className="stack diagnosis-form-column">
           {error ? <div className="flash">{error}</div> : null}
 
-          <div className="stat-strip">
-            <div className="stat-pill">
-              <span className="muted">Required</span>
-              <strong>Solver, case, question, file</strong>
-            </div>
-            <div className="stat-pill">
-              <span className="muted">Accepted files</span>
-              <strong>.txt and .log</strong>
-            </div>
-            <div className="stat-pill">
-              <span className="muted">Demo cases</span>
-              <strong>3 seeded samples</strong>
-            </div>
+          <div className="compact-info-strip">
+            <span>Fields marked <strong>*</strong> are required.</span>
+            <span>Accepts `.txt` and `.log` up to 2 MB.</span>
           </div>
 
-          <div className="field">
-            <label htmlFor="solverName">Solver name</label>
-            <span className="field-helper">Required</span>
-            <select
-              id="solverName"
-              value={payload.context.solverName}
-              onBlur={() => markFieldActive("solverName")}
-              onChange={(event) => updateField("solverName", event.target.value)}
-            >
-              {solverOptions.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-            {activeErrors.solverName && formErrors.solverName ? (
-              <span className="field-error">{formErrors.solverName}</span>
-            ) : null}
-          </div>
+          <div className="diagnosis-section">
+            <div className="diagnosis-section-header">
+              <div className="eyebrow">1. Simulation</div>
+              <strong>Case context</strong>
+            </div>
 
-          <div className="field">
-            <label htmlFor="caseDescription">Short case description</label>
-            <span className="field-helper">Required</span>
-            <textarea
-              id="caseDescription"
-              value={payload.context.caseDescription}
-              onBlur={() => markFieldActive("caseDescription")}
-              onChange={(event) => updateField("caseDescription", event.target.value)}
-              placeholder="Example: Transonic wing-body cruise case with outlet backflow during CFL ramp-up."
-            />
-            {activeErrors.caseDescription && formErrors.caseDescription ? (
-              <span className="field-error">{formErrors.caseDescription}</span>
-            ) : null}
-          </div>
-
-          <div className="form-grid">
             <div className="field">
-              <label htmlFor="machNumber">Mach number</label>
-              <span className="field-helper">Optional</span>
-              <input
-                id="machNumber"
-                type="number"
-                step="0.01"
-                value={payload.context.machNumber ?? ""}
-                onChange={(event) => updateField("machNumber", parseOptionalNumber(event.target.value))}
+              <label htmlFor="solverName">
+                Solver name <span className="field-required">*</span>
+              </label>
+              <select
+                id="solverName"
+                value={payload.context.solverName}
+                onBlur={() => markFieldActive("solverName")}
+                onChange={(event) => updateField("solverName", event.target.value)}
+              >
+                {solverOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+              {activeErrors.solverName && formErrors.solverName ? (
+                <span className="field-error">{formErrors.solverName}</span>
+              ) : null}
+            </div>
+
+            <div className="field">
+              <label htmlFor="caseDescription">
+                Short case description <span className="field-required">*</span>
+              </label>
+              <textarea
+                id="caseDescription"
+                autoFocus
+                value={payload.context.caseDescription}
+                onBlur={() => markFieldActive("caseDescription")}
+                onChange={(event) => updateField("caseDescription", event.target.value)}
+                placeholder="Transonic wing-body case with outlet backflow during CFL ramp"
+              />
+              {activeErrors.caseDescription && formErrors.caseDescription ? (
+                <span className="field-error">{formErrors.caseDescription}</span>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="diagnosis-section">
+            <div className="diagnosis-section-header">
+              <div className="eyebrow">2. Flow Setup</div>
+              <strong>Regime and modeling</strong>
+            </div>
+
+            <div className="form-grid">
+              <div className="field">
+                <label htmlFor="machNumber">Mach number</label>
+                <input
+                  id="machNumber"
+                  type="number"
+                  step="0.01"
+                  inputMode="decimal"
+                  value={payload.context.machNumber ?? ""}
+                  onChange={(event) => updateField("machNumber", parseOptionalNumber(event.target.value))}
+                  placeholder="0.82"
+                />
+              </div>
+
+              <div className="field">
+                <label htmlFor="flowRegime">Flow regime</label>
+                <select
+                  id="flowRegime"
+                  value={payload.context.flowRegime}
+                  onChange={(event) => updateField("flowRegime", event.target.value)}
+                >
+                  {flowRegimeOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="field">
+                <label htmlFor="turbulenceModel">Turbulence model</label>
+                <select
+                  id="turbulenceModel"
+                  value={payload.context.turbulenceModel}
+                  onChange={(event) => updateField("turbulenceModel", event.target.value)}
+                >
+                  {turbulenceModelOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="field">
+              <label htmlFor="notes">Mesh / boundary condition notes</label>
+              <textarea
+                id="notes"
+                value={payload.context.notes ?? ""}
+                onChange={(event) => updateField("notes", event.target.value)}
+                placeholder="Outlet placement, mesh quality, wall treatment, initialization"
               />
             </div>
+          </div>
 
-            <div className="field">
-              <label htmlFor="flowRegime">Flow regime</label>
-              <select
-                id="flowRegime"
-                value={payload.context.flowRegime}
-                onChange={(event) => updateField("flowRegime", event.target.value)}
-              >
-                {flowRegimeOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
+          <div className="diagnosis-section">
+            <div className="diagnosis-section-header">
+              <div className="eyebrow">3. Troubleshooting Question</div>
+              <strong>What needs to be explained</strong>
             </div>
 
             <div className="field">
-              <label htmlFor="turbulenceModel">Turbulence model</label>
-              <select
-                id="turbulenceModel"
-                value={payload.context.turbulenceModel}
-                onChange={(event) => updateField("turbulenceModel", event.target.value)}
-              >
-                {turbulenceModelOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
+              <label htmlFor="question">
+                Troubleshooting question <span className="field-required">*</span>
+              </label>
+              <textarea
+                id="question"
+                value={payload.question}
+                onBlur={() => markFieldActive("question")}
+                onChange={(event) =>
+                  setPayload((current) => ({
+                    ...current,
+                    question: event.target.value
+                  }))
+                }
+                placeholder="Why does pressure correction diverge after the CFL ramp increases?"
+              />
+              {activeErrors.question && formErrors.question ? (
+                <span className="field-error">{formErrors.question}</span>
+              ) : null}
             </div>
-          </div>
-
-          <div className="field">
-            <label htmlFor="notes">Mesh / boundary condition notes</label>
-            <span className="field-helper">Optional</span>
-            <textarea
-              id="notes"
-              value={payload.context.notes ?? ""}
-              onChange={(event) => updateField("notes", event.target.value)}
-              placeholder="Mesh quality concerns, outlet placement, wall treatment, farfield conditions, initialization details..."
-            />
-          </div>
-
-          <div className="field">
-            <label htmlFor="question">Troubleshooting question</label>
-            <span className="field-helper">Required</span>
-            <textarea
-              id="question"
-              value={payload.question}
-              onBlur={() => markFieldActive("question")}
-              onChange={(event) =>
-                setPayload((current) => ({
-                  ...current,
-                  question: event.target.value
-                }))
-              }
-              placeholder="Example: Why is the pressure correction diverging after increasing the CFL ramp?"
-            />
-            {activeErrors.question && formErrors.question ? (
-              <span className="field-error">{formErrors.question}</span>
-            ) : null}
           </div>
         </section>
 
-        <aside className="stack">
-          <section className="panel stack">
+        <aside className="diagnosis-sidebar">
+          <section className="panel stack diagnosis-rail">
             <div className="panel-header">
               <div>
-                <h2 className="section-title">Input file</h2>
-                <p className="subtle">Attach one text-based solver log.</p>
+                <h2 className="section-title">Execution</h2>
+                <p className="subtle">Upload, verify, and run.</p>
               </div>
-              <span className="pill">Step 1</span>
+              <StatusBadge value={executionStatus} />
             </div>
+
+            <div className="execution-status-strip">
+              <div className="execution-status-item">
+                <span className="muted">Run</span>
+                <StatusBadge value={executionStatus} />
+              </div>
+              <div className="execution-status-item">
+                <span className="muted">File</span>
+                <StatusBadge value={fileStatus} />
+              </div>
+              <div className="execution-status-item">
+                <span className="muted">Parser</span>
+                <StatusBadge value={parserStatus} />
+              </div>
+            </div>
+
+            <p className="subtle execution-readiness">{readinessMessage}</p>
 
             <label
               className={`upload-dropzone ${isDragging ? "upload-dropzone-active" : ""}`}
@@ -356,7 +422,7 @@ export function NewDiagnosisPage() {
               />
               <strong>Drag and drop a solver log</strong>
               <p className="subtle">Click to browse or drop a file here.</p>
-              <span className="field-helper">.txt or .log, up to 2 MB</span>
+              <span className="field-helper">`.txt` or `.log`</span>
             </label>
 
             {activeErrors.logFile && formErrors.logFile ? (
@@ -372,17 +438,11 @@ export function NewDiagnosisPage() {
               </button>
             </div>
 
-            {loadedSampleTitle ? (
-              <span className="muted">Sample loaded: {loadedSampleTitle}</span>
-            ) : (
-              <span className="muted">Use a seeded sample if you want a quick demo run.</span>
-            )}
-          </section>
-
-          <section className="panel stack">
             <div className="section-heading">
-              <strong>File preview</strong>
-              <span className="muted">First-pass preview of the uploaded content.</span>
+              <strong>Selected file</strong>
+              <span className="muted">
+                {loadedSampleTitle ? `Sample: ${loadedSampleTitle}` : "Your upload or a seeded sample."}
+              </span>
             </div>
             {payload.logFile.content ? (
               <div className="stack">
@@ -397,40 +457,38 @@ export function NewDiagnosisPage() {
             ) : (
               <div className="empty-state">No file loaded yet. Upload a solver log or use one of the seeded sample cases.</div>
             )}
-          </section>
 
-          <section className="panel stack">
             <div className="section-heading">
-              <strong>Parsing status</strong>
-              <span className="muted">Quick parser check before submission.</span>
+              <strong>Parser quick summary</strong>
+              <span className="muted">Immediate parser coverage before run.</span>
             </div>
             <div className="stack">
               <div className="status-row">
                 <strong className={parsingToneClass}>{parsingPreview.statusLabel}</strong>
                 <span className="muted">Generic parser preview</span>
               </div>
-              <div className="meta-grid">
-                <div className="meta-card">
+              <div className="metric-strip">
+                <div className="metric-item">
                   <span className="muted">Lines</span>
                   <strong>{parsingPreview.lineCount}</strong>
                 </div>
-                <div className="meta-card">
+                <div className="metric-item">
                   <span className="muted">Residuals</span>
                   <strong>{parsingPreview.residualCount}</strong>
                 </div>
-                <div className="meta-card">
+                <div className="metric-item">
                   <span className="muted">Warnings</span>
                   <strong>{parsingPreview.warningCount}</strong>
                 </div>
-                <div className="meta-card">
+                <div className="metric-item">
                   <span className="muted">Errors</span>
                   <strong>{parsingPreview.errorCount}</strong>
                 </div>
               </div>
               {payload.logFile.content && parsingPreview.residualCount === 0 ? (
                 <div className="report-empty-state">
-                  The file loaded successfully, but the generic parser found limited residual signals.
-                  AeroSLM can still return a partial diagnosis using warnings, errors, and retrieved references.
+                  The file loaded, but the generic parser found limited residual signals.
+                  AeroSLM can still return a partial diagnosis from warnings, errors, and retrieved references.
                 </div>
               ) : null}
             </div>

@@ -11,10 +11,24 @@ function prettyJson(value: unknown): string {
   return JSON.stringify(value, null, 2);
 }
 
+const inspectorTabs = [
+  { id: "overview", label: "Overview" },
+  { id: "raw-log", label: "Raw log" },
+  { id: "parsed-json", label: "Parsed JSON" },
+  { id: "warnings", label: "Warnings" },
+  { id: "residuals", label: "Residual classification" },
+  { id: "references", label: "Retrieved references" },
+  { id: "validation", label: "Validation hits" },
+  { id: "payload", label: "Final payload" }
+] as const;
+
+type InspectorTabId = (typeof inspectorTabs)[number]["id"];
+
 export function AdminDebugPage() {
   const [snapshot, setSnapshot] = useState<AdminDebugSnapshot | null>(null);
   const [runs, setRuns] = useState<DiagnosisRun[]>([]);
   const [selectedRunId, setSelectedRunId] = useState<string>("");
+  const [activeTab, setActiveTab] = useState<InspectorTabId>("overview");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -64,18 +78,126 @@ export function AdminDebugPage() {
     })) ??
     [];
   const validationFlags = selectedResult?.validationFlags ?? [];
+  const parserResidualCount = parserFields?.residualSeries.length ?? 0;
+  const parserWarningCount = extractedWarnings.length;
+  const validationCount = validationFlags.length;
+  const selectedSummary = selectedResult?.summary ?? selectedRun?.statusMessage ?? "No summary available.";
+
+  const tabContent = useMemo(() => {
+    switch (activeTab) {
+      case "overview":
+        return (
+          <div className="admin-inspector-grid">
+            <div className="meta-card">
+              <span className="muted">Case</span>
+              <strong>{selectedRun?.simulationContext.caseDescription ?? "No run selected"}</strong>
+            </div>
+            <div className="meta-card">
+              <span className="muted">Solver</span>
+              <strong>{selectedRun?.simulationContext.solverName ?? "Unavailable"}</strong>
+            </div>
+            <div className="meta-card">
+              <span className="muted">Run status</span>
+              <div>{selectedRun ? <StatusBadge value={selectedRun.status} /> : "Unavailable"}</div>
+            </div>
+            <div className="meta-card">
+              <span className="muted">Created</span>
+              <strong>{selectedRun ? formatTimestamp(selectedRun.createdAt) : "Unavailable"}</strong>
+            </div>
+            <div className="admin-summary-block">
+              <div className="eyebrow">Current summary</div>
+              <p className="subtle">{selectedSummary}</p>
+            </div>
+            <div className="admin-summary-block">
+              <div className="eyebrow">Question</div>
+              <p className="subtle">{selectedRun?.question ?? "No question available."}</p>
+            </div>
+          </div>
+        );
+      case "raw-log":
+        return rawLogText ? (
+          <pre className="debug-code-block">{rawLogText}</pre>
+        ) : (
+          <EmptyState tone="report" message="No uploaded log text is available for this run." />
+        );
+      case "parsed-json":
+        return parserFields ? (
+          <pre className="debug-code-block">{prettyJson(parserFields)}</pre>
+        ) : (
+          <EmptyState tone="report" message="Parsed field output is unavailable." />
+        );
+      case "warnings":
+        return extractedWarnings.length > 0 ? (
+          <div className="admin-message-list">
+            {extractedWarnings.map((message) => (
+              <div key={message} className="admin-message-row">
+                <p>{message}</p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <EmptyState tone="report" message="No warnings or solver messages were extracted." />
+        );
+      case "residuals":
+        return residualOutput.length > 0 ? (
+          <pre className="debug-code-block">{prettyJson(residualOutput)}</pre>
+        ) : (
+          <EmptyState tone="report" message="No residual classification output is available for this run." />
+        );
+      case "references":
+        return retrievedReferences.length > 0 ? (
+          <div className="admin-reference-list">
+            {retrievedReferences.map((reference) => (
+              <div key={reference.id} className="admin-reference-row">
+                <strong>{reference.title}</strong>
+                <p className="subtle">{reference.snippet}</p>
+                <p className="muted technical-text">{reference.relevanceExplanation}</p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <EmptyState tone="report" message="No retrieved references are available for this run." />
+        );
+      case "validation":
+        return validationFlags.length > 0 ? (
+          <pre className="debug-code-block">{prettyJson(validationFlags)}</pre>
+        ) : (
+          <EmptyState tone="report" message="No validation rule hits were recorded for this run." />
+        );
+      case "payload":
+        return selectedResult ? (
+          <pre className="debug-code-block">{prettyJson(selectedResult)}</pre>
+        ) : (
+          <EmptyState tone="report" message="No diagnosis payload is available for this run." />
+        );
+      default:
+        return null;
+    }
+  }, [
+    activeTab,
+    extractedWarnings,
+    parserFields,
+    parserWarningCount,
+    rawLogText,
+    residualOutput,
+    retrievedReferences,
+    selectedResult,
+    selectedRun,
+    selectedSummary,
+    validationFlags
+  ]);
 
   return (
     <div className="stack">
       <PageHeader
         title="Admin debug"
-        description="Inspect parser output, rule hits, and the final assembled diagnosis."
+        description="Inspect parser output, rule hits, and the assembled diagnosis payload."
       />
 
       {error ? <div className="flash">{error}</div> : null}
 
       <div className="admin-layout">
-        <aside className="panel stack">
+        <aside className="admin-sidebar stack">
           <div className="panel-header">
             <div>
               <div className="eyebrow">Run selector</div>
@@ -106,19 +228,45 @@ export function AdminDebugPage() {
               </div>
 
               {selectedRun ? (
-                <div className="card-link stack">
+                <div className="admin-run-card">
                   <div className="report-inline">
                     <strong>{selectedRun.simulationContext.caseDescription}</strong>
                     <StatusBadge value={selectedRun.status} />
                   </div>
                   <p className="muted">{formatTimestamp(selectedRun.createdAt)}</p>
-                  <p className="subtle">{selectedRun.question}</p>
+                  <p className="subtle technical-text">{selectedRun.question}</p>
                 </div>
               ) : null}
             </div>
           )}
 
           <div className="section-divider" />
+
+          <div className="panel-header">
+            <div>
+              <div className="eyebrow">Quick counts</div>
+              <strong>Run signals</strong>
+            </div>
+          </div>
+
+          <div className="admin-quick-grid">
+            <div className="admin-count-item">
+              <span className="muted">Residual series</span>
+              <strong>{parserResidualCount}</strong>
+            </div>
+            <div className="admin-count-item">
+              <span className="muted">Warnings</span>
+              <strong>{parserWarningCount}</strong>
+            </div>
+            <div className="admin-count-item">
+              <span className="muted">Validation hits</span>
+              <strong>{validationCount}</strong>
+            </div>
+            <div className="admin-count-item">
+              <span className="muted">Status</span>
+              <div>{selectedRun ? <StatusBadge value={selectedRun.status} /> : "Unavailable"}</div>
+            </div>
+          </div>
 
           <div className="panel-header">
             <div>
@@ -129,12 +277,12 @@ export function AdminDebugPage() {
           {!snapshot ? (
             <EmptyState tone="report" message="Loading debug snapshot..." />
           ) : (
-            <div className="meta-grid">
-              <div className="meta-card">
+            <div className="admin-quick-grid">
+              <div className="admin-count-item">
                 <span className="muted">Knowledge base</span>
                 <strong>{snapshot.knowledgeBaseSize} references</strong>
               </div>
-              <div className="meta-card">
+              <div className="admin-count-item">
                 <span className="muted">Validation rules</span>
                 <strong>{snapshot.validationRules.length} seeded rules</strong>
               </div>
@@ -143,130 +291,24 @@ export function AdminDebugPage() {
         </aside>
 
         <section className="stack">
-          <details className="report-section" open>
-            <summary className="report-section-summary">
-              <div>
-                <strong>Raw uploaded log text</strong>
-                <p className="muted">Original log content.</p>
-              </div>
-              <span className="muted">Toggle</span>
-            </summary>
-            <div className="report-section-body">
-              {rawLogText ? <pre className="debug-code-block">{rawLogText}</pre> : <EmptyState tone="report" message="No uploaded log text is available for this run." />}
+          <div className="panel admin-inspector-panel">
+            <div className="admin-tab-bar" role="tablist" aria-label="Admin debug views">
+              {inspectorTabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  className={`admin-tab ${activeTab === tab.id ? "admin-tab-active" : ""}`}
+                  onClick={() => setActiveTab(tab.id)}
+                  type="button"
+                >
+                  {tab.label}
+                </button>
+              ))}
             </div>
-          </details>
 
-          <details className="report-section">
-            <summary className="report-section-summary">
-              <div>
-                <strong>Parsed fields JSON</strong>
-                <p className="muted">Structured parser output.</p>
-              </div>
-              <span className="muted">Toggle</span>
-            </summary>
-            <div className="report-section-body">
-              {parserFields ? <pre className="debug-code-block">{prettyJson(parserFields)}</pre> : <EmptyState tone="report" message="Parsed field output is unavailable." />}
+            <div className="admin-tab-panel">
+              {tabContent}
             </div>
-          </details>
-
-          <details className="report-section">
-            <summary className="report-section-summary">
-              <div>
-                <strong>Extracted warnings and messages</strong>
-                <p className="muted">Direct parser messages.</p>
-              </div>
-              <span className="muted">Toggle</span>
-            </summary>
-            <div className="report-section-body">
-              {extractedWarnings.length > 0 ? (
-                <div className="card-list">
-                  {extractedWarnings.map((message) => (
-                    <div key={message} className="card-link">
-                      <p className="subtle">{message}</p>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <EmptyState tone="report" message="No warnings or solver messages were extracted." />
-              )}
-            </div>
-          </details>
-
-          <details className="report-section">
-            <summary className="report-section-summary">
-              <div>
-                <strong>Residual classification output</strong>
-                <p className="muted">Residual heuristics and confidence.</p>
-              </div>
-              <span className="muted">Toggle</span>
-            </summary>
-            <div className="report-section-body">
-              {residualOutput.length > 0 ? (
-                <pre className="debug-code-block">{prettyJson(residualOutput)}</pre>
-              ) : (
-                <EmptyState tone="report" message="No residual classification output is available for this run." />
-              )}
-            </div>
-          </details>
-
-          <details className="report-section">
-            <summary className="report-section-summary">
-              <div>
-                <strong>Retrieved references</strong>
-                <p className="muted">Retrieved references and match reasons.</p>
-              </div>
-              <span className="muted">Toggle</span>
-            </summary>
-            <div className="report-section-body">
-              {retrievedReferences.length > 0 ? (
-                <div className="card-list">
-                  {retrievedReferences.map((reference) => (
-                    <div key={reference.id} className="card-link stack">
-                      <strong>{reference.title}</strong>
-                      <p className="subtle">{reference.snippet}</p>
-                      <p className="muted">{reference.relevanceExplanation}</p>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <EmptyState tone="report" message="No retrieved references are available for this run." />
-              )}
-            </div>
-          </details>
-
-          <details className="report-section">
-            <summary className="report-section-summary">
-              <div>
-                <strong>Validation rule hits</strong>
-                <p className="muted">Validation hits recorded during assembly.</p>
-              </div>
-              <span className="muted">Toggle</span>
-            </summary>
-            <div className="report-section-body">
-              {validationFlags.length > 0 ? (
-                <pre className="debug-code-block">{prettyJson(validationFlags)}</pre>
-              ) : (
-                <EmptyState tone="report" message="No validation rule hits were recorded for this run." />
-              )}
-            </div>
-          </details>
-
-          <details className="report-section">
-            <summary className="report-section-summary">
-              <div>
-                <strong>Final diagnosis payload</strong>
-                <p className="muted">Payload rendered by the results page.</p>
-              </div>
-              <span className="muted">Toggle</span>
-            </summary>
-            <div className="report-section-body">
-              {selectedResult ? (
-                <pre className="debug-code-block">{prettyJson(selectedResult)}</pre>
-              ) : (
-                <EmptyState tone="report" message="No diagnosis payload is available for this run." />
-              )}
-            </div>
-          </details>
+          </div>
         </section>
       </div>
     </div>

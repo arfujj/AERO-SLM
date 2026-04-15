@@ -297,7 +297,10 @@ export function ResultsPage() {
       <div className="stack">
         <PageHeader title="Processing diagnosis" description={run.question} />
         <div className="panel stack">
-          <strong>{run.statusMessage}</strong>
+          <div className="report-inline">
+            <strong>{run.statusMessage}</strong>
+            <StatusBadge value={run.status} />
+          </div>
           <p className="subtle">
             AeroSLM is parsing the uploaded log, checking solver signals, and assembling a
             structured report.
@@ -305,7 +308,7 @@ export function ResultsPage() {
           <div className="meta-grid">
             <div className="meta-card">
               <span className="muted">Run status</span>
-              <strong>Processing</strong>
+              <div><StatusBadge value="processing" /></div>
             </div>
             <div className="meta-card">
               <span className="muted">Solver</span>
@@ -398,9 +401,9 @@ export function ResultsPage() {
             </div>
             <div className="meta-card">
               <span className="muted">Run status</span>
-              <strong>
+              <div>
                 <StatusBadge value={run?.status ?? parsedSummary?.status ?? "unknown"} />
-              </strong>
+              </div>
             </div>
           </div>
         </ReportSection>
@@ -421,7 +424,7 @@ export function ResultsPage() {
                   </div>
                 ) : null}
               </div>
-              <p className="subtle">
+              <p className="subtle technical-text">
                 {displayResult.primaryIssue?.summary ??
                   "AeroSLM assembled a partial summary, but the uploaded log did not support a stronger issue classification."}
               </p>
@@ -507,8 +510,8 @@ export function ResultsPage() {
                       <StatusBadge value={confidenceLevel(assessment.confidence)} />
                     </div>
                   </div>
-                  <p className="subtle">{assessment.rationale}</p>
-                  <p className="muted">{assessment.trendSummary}</p>
+                  <p className="subtle technical-text">{assessment.rationale}</p>
+                  <p className="muted technical-text">{assessment.trendSummary}</p>
                   <div className="report-evidence-block">
                     <div className="eyebrow">Intermediate reasoning</div>
                     <ul className="list">
@@ -543,7 +546,7 @@ export function ResultsPage() {
                     <StatusBadge value={confidenceLevel(cause.confidence)} />
                   </div>
                 </div>
-                <p className="subtle">{cause.rationale}</p>
+                <p className="subtle technical-text">{cause.rationale}</p>
                 <div className="report-evidence-block">
                   <div className="eyebrow">Evidence</div>
                   <ul className="list">
@@ -578,8 +581,8 @@ export function ResultsPage() {
                     <StatusBadge value={confidenceLevel(recommendation.confidence)} />
                   </div>
                 </div>
-                <p>{recommendation.action}</p>
-                <p className="subtle">{recommendation.rationale}</p>
+                <p className="technical-text">{recommendation.action}</p>
+                <p className="subtle technical-text">{recommendation.rationale}</p>
                 <div className="report-split">
                   <div className="report-evidence-block">
                     <div className="eyebrow">Grounding</div>
@@ -619,8 +622,8 @@ export function ResultsPage() {
                   <strong>{reference.title}</strong>
                   <StatusBadge value={reference.sourceType} />
                 </div>
-                <p className="subtle">{reference.summary}</p>
-                {reference.excerpt ? <p className="muted">{reference.excerpt}</p> : null}
+                <p className="subtle technical-text">{reference.summary}</p>
+                {reference.excerpt ? <p className="muted technical-text">{reference.excerpt}</p> : null}
               </div>
             )) : <EmptyState tone="report" message="No supporting references were retrieved for this run." />}
           </div>
@@ -652,8 +655,8 @@ export function ResultsPage() {
                     <strong>{flag.rule}</strong>
                     <StatusBadge value={flag.severity} />
                   </div>
-                  <p className="subtle">{flag.message}</p>
-                  <p className="muted">Triggered by: {flag.triggeredBy}</p>
+                  <p className="subtle technical-text">{flag.message}</p>
+                  <p className="muted technical-text">Triggered by: {flag.triggeredBy}</p>
                   {flag.recommendationId ? (
                     <p className="muted">
                       Recommendation link: {flag.recommendationId}
@@ -679,7 +682,7 @@ export function ResultsPage() {
                     <strong>{entry.type}</strong>
                     <StatusBadge value={entry.type === "error" ? "critical" : entry.type === "warning" ? "high" : "low"} />
                   </div>
-                  <p className="subtle">{entry.message}</p>
+                  <p className="subtle technical-text">{entry.message}</p>
                 </div>
               ))
             ) : <EmptyState tone="report" message="No raw warnings or solver messages were captured." />}

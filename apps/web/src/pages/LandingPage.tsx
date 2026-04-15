@@ -4,50 +4,48 @@ const workflowSteps = [
   {
     step: "01",
     title: "Upload solver log",
-    description: "Submit the raw solver output to capture warnings, residual behavior, and run-failure signatures."
+    description: "Attach the solver output."
   },
   {
     step: "02",
-    title: "Add case context and troubleshooting question",
-    description: "Provide solver setup, flow regime, mesh scale, turbulence model, and the engineering question you need answered."
+    title: "Add case context",
+    description: "Describe the setup and failure mode."
   },
   {
     step: "03",
-    title: "Receive validated diagnostic report",
-    description: "Review a structured report with probable causes, supporting evidence, stabilization actions, and follow-up checks."
+    title: "Review the report",
+    description: "Inspect evidence and next actions."
   }
 ];
 
 const featureCards = [
   {
     title: "Log parsing",
-    description: "Extract solver events, warnings, errors, and timestep metadata into a diagnosis-ready structure."
+    description: "Warnings, iterations, and residual signals."
   },
   {
     title: "Residual analysis",
-    description: "Highlight convergence breakdowns, continuity drift, and unstable residual patterns relevant to CFD troubleshooting."
+    description: "Divergence, oscillation, stagnation, slow convergence."
   },
   {
-    title: "Knowledge-grounded recommendations",
-    description: "Map observed solver signals to stored troubleshooting guidance so recommendations remain traceable."
+    title: "Retrieved references",
+    description: "Seeded engineering guidance matched to the run."
   },
   {
     title: "Physics validation",
-    description: "Create clean seams for domain checks on flow regime, mesh quality, boundary conditions, and solver consistency."
+    description: "Context checks before recommendations are surfaced."
   }
 ];
 
 export function LandingPage() {
   return (
     <div className="stack">
-      <section className="hero hero-landing">
-        <div className="stack">
-          <div className="eyebrow">Physics-aware CFD diagnostic copilot</div>
+      <section className="hero hero-compact">
+        <div className="stack hero-main">
           <h1>AeroSLM</h1>
-          <h2 className="hero-tagline">Upload solver logs, add case context, and get validated troubleshooting guidance.</h2>
+          <h2 className="hero-tagline">Physics-aware CFD diagnostic copilot</h2>
           <p className="subtle">
-            A quiet technical workspace for aerospace engineers and simulation analysts moving from
-            unstable solver output to a structured report.
+            Upload solver logs, add case context, and get structured troubleshooting guidance.
           </p>
           <div className="hero-actions">
             <Link className="button button-primary" to="/diagnose/new">
@@ -58,29 +56,13 @@ export function LandingPage() {
             </Link>
           </div>
         </div>
-        <div className="hero-side">
-          <div className="hero-summary-list">
-            <div>
-              <strong>Input fidelity</strong>
-              <p className="subtle">Keep log text and case context together from intake through review.</p>
-            </div>
-            <div>
-              <strong>Structured outputs</strong>
-              <p className="subtle">Reports separate evidence, likely causes, corrective actions, and validation.</p>
-            </div>
-            <div>
-              <strong>Engineering-ready workflow</strong>
-              <p className="subtle">Designed so parser, retrieval, and validation layers can deepen over time.</p>
-            </div>
-          </div>
-        </div>
       </section>
 
-      <section className="section-block section-divider">
-        <div>
+      <section className="section-block section-divider landing-compact-section">
+        <div className="landing-section-header">
           <h2 className="section-title">Workflow</h2>
         </div>
-        <div className="workflow-list">
+        <div className="workflow-row workflow-row-minimal">
           {workflowSteps.map((item) => (
             <div key={item.step} className="workflow-card">
               <span className="workflow-step">{item.step}</span>
@@ -93,13 +75,13 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section className="section-block section-divider">
-        <div>
-          <h2 className="section-title">Core capabilities</h2>
+      <section className="section-block section-divider landing-compact-section">
+        <div className="landing-section-header">
+          <h2 className="section-title">Capabilities</h2>
         </div>
-        <div className="feature-grid">
+        <div className="capability-list">
           {featureCards.map((feature) => (
-            <div key={feature.title} className="panel feature-card">
+            <div key={feature.title} className="capability-item">
               <h3>{feature.title}</h3>
               <p className="subtle">{feature.description}</p>
             </div>
@@ -107,19 +89,10 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section className="scope-note">
-        <div className="eyebrow">MVP scope</div>
-        <p className="subtle">
-          AeroSLM currently focuses on structured log intake, heuristic diagnosis, starter
-          retrieval, and report generation. It is designed to support deeper parser coverage,
-          stronger validation rules, and model-assisted recommendations in the next iteration.
-        </p>
-      </section>
-
       <footer className="landing-footer">
         <div>
           <strong>AeroSLM</strong>
-          <p className="subtle">A technical workspace for CFD troubleshooting and diagnostic review.</p>
+          <p className="subtle">Technical workspace for CFD troubleshooting and report review.</p>
         </div>
         <div className="footer-links">
           <Link to="/diagnose/new">Start Diagnosis</Link>

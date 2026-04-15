@@ -1,4 +1,5 @@
 import type { ParsedLogData } from "@aeroslm/shared";
+import { StatusBadge } from "./StatusBadge";
 
 interface ParserSummaryViewProps {
   parsedLogData: ParsedLogData;
@@ -14,7 +15,7 @@ export function ParserSummaryView({ parsedLogData }: ParserSummaryViewProps) {
         </div>
         <div className="meta-card">
           <span className="muted">Status</span>
-          <strong>{parsedLogData.status}</strong>
+          <div><StatusBadge value={parsedLogData.status} /></div>
         </div>
         <div className="meta-card">
           <span className="muted">Last iteration</span>
