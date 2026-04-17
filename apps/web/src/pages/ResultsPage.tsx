@@ -250,8 +250,12 @@ export function ResultsPage() {
             id: `saved_log_${effectiveReport.id}`,
             fileName: "server-report.log",
             fileType: "log",
+            mimeType: "text/plain",
             sizeBytes: 0,
             uploadedAt: effectiveReport.createdAt,
+            rawText: "",
+            lines: [],
+            lineCount: 0,
             content: ""
           },
           simulationContext: effectiveReport.context,

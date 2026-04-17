@@ -26,6 +26,40 @@ const payload: DiagnosePayload = {
 const parsedLogData: ParsedLogData = {
   parsedAt: new Date().toISOString(),
   parserVersion: "generic-v1",
+  parserType: "generic-text-v1",
+  solverDetected: "OpenFOAM",
+  rawText: payload.logFile.content,
+  normalizedText: payload.logFile.content,
+  lines: [payload.logFile.content],
+  lineCount: 1,
+  iterations: [100, 101, 102],
+  residualEntries: [
+    {
+      field: "Continuity",
+      iteration: 100,
+      rawValue: "8.0e-03",
+      value: 0.008,
+      sourceLine: "Continuity residual = 8.0e-03"
+    }
+  ],
+  cflEntries: [],
+  fatalMessages: [],
+  notices: [],
+  metadata: { solver: "OpenFOAM" },
+  parseCoverage: {
+    iterations: "available",
+    residuals: "available",
+    cfl: "unavailable",
+    warnings: "available",
+    errors: "unavailable",
+    fatalMessages: "unavailable",
+    notices: "unavailable",
+    metadata: "available",
+    status: "partial",
+    missingFields: ["cflEntries", "errors", "fatalMessages", "notices"]
+  },
+  unsupportedPatterns: [],
+  parseStatus: "partial",
   sourceFormat: "generic-v1",
   status: "unstable",
   rawLineCount: 8,
@@ -37,7 +71,7 @@ const parsedLogData: ParsedLogData = {
   errors: [],
   solverMessages: [],
   convergencePatterns: ["Outlet pressure monitor oscillation exceeds tolerance band"],
-  missingFields: ["cflValues"],
+  missingFields: ["cflEntries"],
   residualSeries: [
     {
       id: "continuity",
@@ -107,7 +141,8 @@ test("assembles partial diagnosis output gracefully when parsing is incomplete",
     parsedLogData: {
       ...parsedLogData,
       residualSeries: [],
-      missingFields: ["residualValues", "cflValues", "solverMessages"]
+      residualEntries: [],
+      missingFields: ["residualEntries", "cflEntries", "solverMessages"]
     },
     residualAnalysis: [],
     retrievedReferences: [],

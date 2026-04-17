@@ -3,12 +3,12 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import type { DiagnosePayload } from "@aeroslm/shared";
 import { PageHeader } from "../components/PageHeader";
+import { RuledLineInput } from "../components/RuledLineInput";
 import { StatusBadge } from "../components/StatusBadge";
 import {
   analyzeLogContent,
   buildFilePreview,
   createInitialPayload,
-  flowRegimeOptions,
   hasFormErrors,
   solverOptions,
   turbulenceModelOptions,
@@ -31,9 +31,146 @@ function parseOptionalNumber(value: string): number | undefined {
 
 const acceptedExtensions = [".txt", ".log"];
 const maxUploadBytes = 2 * 1024 * 1024;
+const simulationTypeOptions = [
+  "Steady state",
+  "Transient",
+  "Pseudo-transient",
+  "Unknown"
+] as const;
+
+interface StructuredNotesFields {
+  meshSetup: string[];
+  mesherSetup: string[];
+  refinement: string[];
+  physicsModelDetails: string[];
+  boundaryConditions: string[];
+  cflNumber: string;
+  simulationType: string;
+}
+
+interface StructuredQuestionFields {
+  query: string;
+}
+
+function parseStructuredNotes(notes?: string): StructuredNotesFields {
+  function splitDetail(value: string): string[] {
+    return value
+      .split(/\s*(?:;|\||\n)\s*/g)
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  if (!notes?.trim()) {
+    return {
+      meshSetup: [],
+      mesherSetup: [],
+      refinement: [],
+      physicsModelDetails: [],
+      boundaryConditions: [],
+      cflNumber: "",
+      simulationType: "Steady state"
+    };
+  }
+
+  const lines = notes.split("\n").map((line) => line.trim()).filter(Boolean);
+  const parsed: StructuredNotesFields = {
+    meshSetup: [],
+    mesherSetup: [],
+    refinement: [],
+    physicsModelDetails: [],
+    boundaryConditions: [],
+    cflNumber: "",
+    simulationType: "Steady state"
+  };
+
+  for (const line of lines) {
+    if (line.startsWith("Mesh setup:")) {
+      parsed.meshSetup = splitDetail(line.replace("Mesh setup:", "").trim());
+    } else if (line.startsWith("Mesher setup:")) {
+      parsed.mesherSetup = splitDetail(line.replace("Mesher setup:", "").trim());
+    } else if (line.startsWith("Refinement:")) {
+      parsed.refinement = splitDetail(line.replace("Refinement:", "").trim());
+    } else if (line.startsWith("Physics model:")) {
+      parsed.physicsModelDetails = splitDetail(line.replace("Physics model:", "").trim());
+    } else if (line.startsWith("Boundary conditions:")) {
+      parsed.boundaryConditions = splitDetail(line.replace("Boundary conditions:", "").trim());
+    } else if (line.startsWith("CFL number:")) {
+      parsed.cflNumber = line.replace("CFL number:", "").trim();
+    } else if (line.startsWith("Simulation type:")) {
+      parsed.simulationType = line.replace("Simulation type:", "").trim();
+    }
+  }
+
+  if (
+    parsed.meshSetup.length === 0 &&
+    parsed.mesherSetup.length === 0 &&
+    parsed.refinement.length === 0 &&
+    parsed.physicsModelDetails.length === 0 &&
+    parsed.boundaryConditions.length === 0 &&
+    !parsed.cflNumber &&
+    !parsed.simulationType
+  ) {
+    parsed.meshSetup = splitDetail(notes);
+  }
+
+  return parsed;
+}
+
+function composeStructuredNotes(fields: StructuredNotesFields): string {
+  return [
+    fields.meshSetup.filter(Boolean).length > 0
+      ? `Mesh setup: ${fields.meshSetup.filter(Boolean).join("; ")}`
+      : "",
+    fields.mesherSetup.filter(Boolean).length > 0
+      ? `Mesher setup: ${fields.mesherSetup.filter(Boolean).join("; ")}`
+      : "",
+    fields.refinement.filter(Boolean).length > 0
+      ? `Refinement: ${fields.refinement.filter(Boolean).join("; ")}`
+      : "",
+    fields.physicsModelDetails.filter(Boolean).length > 0
+      ? `Physics model: ${fields.physicsModelDetails.filter(Boolean).join("; ")}`
+      : "",
+    fields.boundaryConditions.filter(Boolean).length > 0
+      ? `Boundary conditions: ${fields.boundaryConditions.filter(Boolean).join("; ")}`
+      : "",
+    fields.cflNumber.trim() ? `CFL number: ${fields.cflNumber.trim()}` : "",
+    fields.simulationType.trim() ? `Simulation type: ${fields.simulationType.trim()}`
+      : ""
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+function parseStructuredQuestion(question: string): StructuredQuestionFields {
+  if (!question.trim()) {
+    return {
+      query: ""
+    };
+  }
+
+  return {
+    query: question
+  };
+}
+
+function composeStructuredQuestion(fields: StructuredQuestionFields): string {
+  return fields.query.trim();
+}
 
 export function NewDiagnosisPage() {
   const [payload, setPayload] = useState<DiagnosePayload>(createInitialPayload);
+  const [structuredNotes, setStructuredNotes] = useState<StructuredNotesFields>({
+    meshSetup: [],
+    mesherSetup: [],
+    refinement: [],
+    physicsModelDetails: [],
+    boundaryConditions: [],
+    cflNumber: "",
+    simulationType: "Steady state"
+  });
+  const [structuredQuestion, setStructuredQuestion] = useState<StructuredQuestionFields>({
+    query: ""
+  });
   const [activeErrors, setActiveErrors] = useState<Record<string, boolean>>({});
   const [isDragging, setIsDragging] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -64,11 +201,17 @@ export function NewDiagnosisPage() {
       }
     });
 
+  function applyPayload(nextPayload: DiagnosePayload) {
+    setPayload(nextPayload);
+    setStructuredNotes(parseStructuredNotes(nextPayload.context.notes ?? ""));
+    setStructuredQuestion(parseStructuredQuestion(nextPayload.question));
+  }
+
   useEffect(() => {
     const prefills = (location.state as { draftPayload?: DiagnosePayload } | null)?.draftPayload;
     if (!prefills) return;
 
-    setPayload(prefills);
+    applyPayload(prefills);
     setActiveErrors({});
     setError(null);
     window.history.replaceState({}, document.title);
@@ -85,6 +228,37 @@ export function NewDiagnosisPage() {
         [key]: value
       }
     }));
+  }
+
+  function updateNotesField<K extends keyof StructuredNotesFields>(
+    key: K,
+    value: StructuredNotesFields[K]
+  ) {
+    setStructuredNotes((current) => {
+      const next = {
+        ...current,
+        [key]: value
+      };
+      updateField("notes", composeStructuredNotes(next));
+      return next;
+    });
+  }
+
+  function updateQuestionField<K extends keyof StructuredQuestionFields>(
+    key: K,
+    value: StructuredQuestionFields[K]
+  ) {
+    setStructuredQuestion((current) => {
+      const next = {
+        ...current,
+        [key]: value
+      };
+      setPayload((existing) => ({
+        ...existing,
+        question: composeStructuredQuestion(next)
+      }));
+      return next;
+    });
   }
 
   function markFieldActive(fieldName: string) {
@@ -157,7 +331,7 @@ export function NewDiagnosisPage() {
   function loadSampleLog() {
     const sample = getSampleSolverCase(sampleIndex);
     setError(null);
-    setPayload(buildPayloadFromSample(sample));
+    applyPayload(buildPayloadFromSample(sample));
     setLoadedSampleTitle(sample.title);
     setSampleIndex((current) => (current + 1) % sampleCaseCount);
     setActiveErrors({});
@@ -240,7 +414,7 @@ export function NewDiagnosisPage() {
 
             <div className="field">
               <label htmlFor="solverName">
-                Solver name <span className="field-required">*</span>
+                Solver <span className="field-required">*</span>
               </label>
               <select
                 id="solverName"
@@ -279,8 +453,75 @@ export function NewDiagnosisPage() {
 
           <div className="diagnosis-section">
             <div className="diagnosis-section-header">
-              <div className="eyebrow">2. Flow Setup</div>
-              <strong>Regime and modeling</strong>
+              <div className="eyebrow">2. Mesh Setup</div>
+              <strong>Grid and initialization</strong>
+            </div>
+
+            <div className="field">
+              <label htmlFor="mesherSetup">Mesher setup</label>
+              <RuledLineInput
+                id="mesherSetup"
+                value={structuredNotes.mesherSetup}
+                onChange={(next) => updateNotesField("mesherSetup", next)}
+                placeholders={[
+                  "snappyHexMesh layers",
+                  "Prism growth rate",
+                  "Surface refinement level",
+                  "Volume refinement controls",
+                  "Feature edge capture"
+                ]}
+                addLabel="Add mesher detail"
+              />
+            </div>
+
+            <div className="field">
+              <label htmlFor="meshSetup">Mesh setup</label>
+              <RuledLineInput
+                id="meshSetup"
+                value={structuredNotes.meshSetup}
+                onChange={(next) =>
+                  updateNotesField(
+                    "meshSetup",
+                    next.map((item) => item.trimStart())
+                  )
+                }
+                placeholders={[
+                  "Mesh size / base cell size",
+                  "Target y+",
+                  "Prism layer count",
+                  "First layer thickness",
+                  "Surface growth rate"
+                ]}
+                addLabel="Add mesh detail"
+              />
+            </div>
+
+            <div className="field">
+              <label htmlFor="refinement">Refinement</label>
+              <RuledLineInput
+                id="refinement"
+                value={structuredNotes.refinement}
+                onChange={(next) =>
+                  updateNotesField(
+                    "refinement",
+                    next.map((item) => item.trimStart())
+                  )
+                }
+                placeholders={[
+                  "Surface refinement level",
+                  "Volume refinement region",
+                  "Wake refinement extent",
+                  "Leading/trailing edge refinement"
+                ]}
+                addLabel="Add refinement detail"
+              />
+            </div>
+          </div>
+
+          <div className="diagnosis-section">
+            <div className="diagnosis-section-header">
+              <div className="eyebrow">3. Flow Setup</div>
+              <strong>Models and boundary setup</strong>
             </div>
 
             <div className="form-grid">
@@ -295,21 +536,6 @@ export function NewDiagnosisPage() {
                   onChange={(event) => updateField("machNumber", parseOptionalNumber(event.target.value))}
                   placeholder="0.82"
                 />
-              </div>
-
-              <div className="field">
-                <label htmlFor="flowRegime">Flow regime</label>
-                <select
-                  id="flowRegime"
-                  value={payload.context.flowRegime}
-                  onChange={(event) => updateField("flowRegime", event.target.value)}
-                >
-                  {flowRegimeOptions.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
               </div>
 
               <div className="field">
@@ -329,42 +555,100 @@ export function NewDiagnosisPage() {
             </div>
 
             <div className="field">
-              <label htmlFor="notes">Mesh / boundary condition notes</label>
-              <textarea
-                id="notes"
-                value={payload.context.notes ?? ""}
-                onChange={(event) => updateField("notes", event.target.value)}
-                placeholder="Outlet placement, mesh quality, wall treatment, initialization"
+              <label htmlFor="physicsModelDetails">Physics model details</label>
+              <RuledLineInput
+                id="physicsModelDetails"
+                value={structuredNotes.physicsModelDetails}
+                onChange={(next) => updateNotesField("physicsModelDetails", next)}
+                placeholder="Compressibility model"
+                addLabel="Add physics detail"
+              />
+            </div>
+
+            <div className="field">
+              <label htmlFor="boundaryConditions">Boundary conditions</label>
+              <RuledLineInput
+                id="boundaryConditions"
+                value={structuredNotes.boundaryConditions}
+                onChange={(next) => updateNotesField("boundaryConditions", next)}
+                placeholder="Inlet total pressure"
+                addLabel="Add boundary condition"
               />
             </div>
           </div>
 
           <div className="diagnosis-section">
             <div className="diagnosis-section-header">
-              <div className="eyebrow">3. Troubleshooting Question</div>
-              <strong>What needs to be explained</strong>
+              <div className="eyebrow">4. Solver Setup</div>
+              <strong>Solver controls</strong>
+            </div>
+
+            <div className="form-grid">
+              <div className="field">
+                <label htmlFor="solverSelection">Solver selection</label>
+                <select
+                  id="solverSelection"
+                  value={payload.context.solverName}
+                  onChange={(event) => updateField("solverName", event.target.value)}
+                >
+                  {solverOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="field">
+                <label htmlFor="cflNumber">CFL Number</label>
+                <input
+                  id="cflNumber"
+                  type="text"
+                  value={structuredNotes.cflNumber}
+                  onChange={(event) => updateNotesField("cflNumber", event.target.value)}
+                  placeholder="25"
+                />
+              </div>
+
+              <div className="field">
+                <label htmlFor="simulationType">Simulation type</label>
+                <select
+                  id="simulationType"
+                  value={structuredNotes.simulationType}
+                  onChange={(event) => updateNotesField("simulationType", event.target.value)}
+                >
+                  {simulationTypeOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div className="diagnosis-section">
+            <div className="diagnosis-section-header">
+              <div className="eyebrow">5. Troubleshooting Question</div>
+              <strong>Troubleshooting query</strong>
             </div>
 
             <div className="field">
-              <label htmlFor="question">
-                Troubleshooting question <span className="field-required">*</span>
+              <label htmlFor="troubleshootingQuery">
+                Troubleshooting query <span className="field-required">*</span>
               </label>
               <textarea
-                id="question"
-                value={payload.question}
+                id="troubleshootingQuery"
+                value={structuredQuestion.query}
                 onBlur={() => markFieldActive("question")}
-                onChange={(event) =>
-                  setPayload((current) => ({
-                    ...current,
-                    question: event.target.value
-                  }))
-                }
+                onChange={(event) => updateQuestionField("query", event.target.value)}
                 placeholder="Why does pressure correction diverge after the CFL ramp increases?"
               />
-              {activeErrors.question && formErrors.question ? (
-                <span className="field-error">{formErrors.question}</span>
-              ) : null}
             </div>
+
+            {activeErrors.question && formErrors.question ? (
+              <span className="field-error">{formErrors.question}</span>
+            ) : null}
           </div>
         </section>
 

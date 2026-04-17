@@ -6,6 +6,40 @@ import { buildRetrievalInput, retrieveEngineeringReferences } from "./knowledgeR
 const parsedLogData: ParsedLogData = {
   parsedAt: new Date().toISOString(),
   parserVersion: "test",
+  parserType: "generic-text-v1",
+  solverDetected: "Unknown",
+  rawText: "Warning: Outlet backflow detected on patch farfield_outlet",
+  normalizedText: "Warning: Outlet backflow detected on patch farfield_outlet",
+  lines: ["Warning: Outlet backflow detected on patch farfield_outlet"],
+  lineCount: 1,
+  iterations: [100, 101, 102],
+  residualEntries: [
+    {
+      field: "Continuity",
+      iteration: 100,
+      rawValue: "8.0e-03",
+      value: 0.008,
+      sourceLine: "Continuity residual = 8.0e-03"
+    }
+  ],
+  cflEntries: [],
+  fatalMessages: [],
+  notices: [],
+  metadata: {},
+  parseCoverage: {
+    iterations: "available",
+    residuals: "available",
+    cfl: "unavailable",
+    warnings: "available",
+    errors: "unavailable",
+    fatalMessages: "unavailable",
+    notices: "unavailable",
+    metadata: "unavailable",
+    status: "partial",
+    missingFields: ["cflEntries", "errors", "fatalMessages", "notices", "metadata"]
+  },
+  unsupportedPatterns: [],
+  parseStatus: "partial",
   sourceFormat: "generic-v1",
   status: "unstable",
   rawLineCount: 6,

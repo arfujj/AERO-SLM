@@ -23,13 +23,22 @@ export type IssueType =
 export type RecommendationPriority = "low" | "medium" | "high";
 export type ReferenceSourceType = "knowledge-base" | "parser" | "solver-log" | "validation";
 export type ValidationSeverity = "info" | "caution" | "critical";
+export type ParserType = "openfoam-v1" | "generic-text-v1";
+export type SolverDetected = "OpenFOAM" | "Unknown";
+export type ParserAvailability = "available" | "unavailable";
+export type ParserCoverageStatus = "complete" | "partial" | "minimal";
+export type ParserOutcomeStatus = "parsed" | "partial" | "unsupported" | "failed";
 
 export interface UploadedLog {
   id: string;
   fileName: string;
   fileType: string;
+  mimeType?: string;
   sizeBytes: number;
   uploadedAt: string;
+  rawText: string;
+  lines: string[];
+  lineCount: number;
   content: string;
 }
 
@@ -52,6 +61,35 @@ export interface NumericSeries {
   metric: string;
   samples: ResidualSample[];
   lastValue: number | null;
+}
+
+export interface ParsedResidualEntry {
+  field: string;
+  iteration: number | null;
+  rawValue: string;
+  value: number | null;
+  sourceLine: string;
+}
+
+export interface ParsedCflEntry {
+  metric: string;
+  iteration: number | null;
+  rawValue: string;
+  value: number | null;
+  sourceLine: string;
+}
+
+export interface ParserCoverage {
+  iterations: ParserAvailability;
+  residuals: ParserAvailability;
+  cfl: ParserAvailability;
+  warnings: ParserAvailability;
+  errors: ParserAvailability;
+  fatalMessages: ParserAvailability;
+  notices: ParserAvailability;
+  metadata: ParserAvailability;
+  status: ParserCoverageStatus;
+  missingFields: string[];
 }
 
 export interface SupportingReference {
@@ -119,7 +157,22 @@ export interface Recommendation {
 export interface ParsedLogData {
   parsedAt: string;
   parserVersion: string;
-  sourceFormat: "generic-v1" | "unknown";
+  parserType: ParserType;
+  solverDetected: SolverDetected;
+  rawText: string;
+  normalizedText: string;
+  lines: string[];
+  lineCount: number;
+  iterations: number[];
+  residualEntries: ParsedResidualEntry[];
+  cflEntries: ParsedCflEntry[];
+  fatalMessages: string[];
+  notices: string[];
+  metadata: Record<string, string>;
+  parseCoverage: ParserCoverage;
+  unsupportedPatterns: string[];
+  parseStatus: ParserOutcomeStatus;
+  sourceFormat: "openfoam-v1" | "generic-v1" | "unknown";
   status: "completed" | "failed" | "unstable" | "unknown";
   rawLineCount: number;
   iterationNumbers: number[];

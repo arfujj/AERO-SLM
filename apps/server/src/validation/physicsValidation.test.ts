@@ -6,6 +6,32 @@ import { validatePhysicsRecommendations } from "./physicsValidation.js";
 const parsedLogData: ParsedLogData = {
   parsedAt: new Date().toISOString(),
   parserVersion: "generic-v1",
+  parserType: "generic-text-v1",
+  solverDetected: "Unknown",
+  rawText: "",
+  normalizedText: "",
+  lines: [],
+  lineCount: 4,
+  iterations: [10, 11],
+  residualEntries: [],
+  cflEntries: [],
+  fatalMessages: [],
+  notices: [],
+  metadata: {},
+  parseCoverage: {
+    iterations: "available",
+    residuals: "unavailable",
+    cfl: "unavailable",
+    warnings: "unavailable",
+    errors: "unavailable",
+    fatalMessages: "unavailable",
+    notices: "unavailable",
+    metadata: "unavailable",
+    status: "minimal",
+    missingFields: ["residualEntries", "cflEntries", "warnings", "errors", "fatalMessages", "notices", "metadata"]
+  },
+  unsupportedPatterns: [],
+  parseStatus: "partial",
   sourceFormat: "generic-v1",
   status: "unstable",
   rawLineCount: 4,
@@ -17,7 +43,7 @@ const parsedLogData: ParsedLogData = {
   errors: [],
   solverMessages: [],
   convergencePatterns: [],
-  missingFields: ["cflValues"],
+  missingFields: ["cflEntries"],
   residualSeries: []
 };
 

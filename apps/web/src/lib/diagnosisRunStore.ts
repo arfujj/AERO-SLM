@@ -45,12 +45,18 @@ function createId(prefix: string): string {
 }
 
 function createUploadedLog(payload: DiagnosePayload): UploadedLog {
+  const lines = payload.logFile.content.split(/\r?\n/);
+
   return {
     id: createId("log"),
     fileName: payload.logFile.fileName,
     fileType: payload.logFile.fileName.split(".").at(-1) ?? "txt",
+    mimeType: "text/plain",
     sizeBytes: payload.logFile.content.length,
     uploadedAt: payload.logFile.uploadedAt,
+    rawText: payload.logFile.content,
+    lines,
+    lineCount: lines.length,
     content: payload.logFile.content
   };
 }
@@ -186,13 +192,50 @@ function mapParsedLogData(report: DiagnosticReport): ParsedLogData {
     };
   });
 
+  const iterations = report.parsedLog.timestepsObserved ? [report.parsedLog.timestepsObserved] : [];
+  const missingFields = ["cflEntries", "fatalMessages", "metadata"];
+
   return {
     parsedAt: report.createdAt,
     parserVersion: "report-adapter-v1",
+    parserType: "generic-text-v1",
+    solverDetected: report.context.solverName === "OpenFOAM" ? "OpenFOAM" : "Unknown",
+    rawText: "",
+    normalizedText: "",
+    lines: [],
+    lineCount: 0,
+    iterations,
+    residualEntries: residualSeries.flatMap((series) =>
+      series.samples.map((sample) => ({
+        field: series.metric,
+        iteration: sample.step,
+        rawValue: sample.rawValue,
+        value: sample.value,
+        sourceLine: `${series.metric} residual = ${sample.rawValue}`
+      }))
+    ),
+    cflEntries: [],
+    fatalMessages: [],
+    notices: [],
+    metadata: {},
+    parseCoverage: {
+      iterations: iterations.length > 0 ? "available" : "unavailable",
+      residuals: residualSeries.length > 0 ? "available" : "unavailable",
+      cfl: "unavailable",
+      warnings: report.parsedLog.warnings.length > 0 ? "available" : "unavailable",
+      errors: report.parsedLog.errors.length > 0 ? "available" : "unavailable",
+      fatalMessages: "unavailable",
+      notices: "unavailable",
+      metadata: "unavailable",
+      status: "partial",
+      missingFields
+    },
+    unsupportedPatterns: [],
+    parseStatus: "partial",
     sourceFormat: "generic-v1",
     status: report.parsedLog.runStatus,
     rawLineCount: 0,
-    iterationNumbers: report.parsedLog.timestepsObserved ? [report.parsedLog.timestepsObserved] : [],
+    iterationNumbers: iterations,
     lastIteration: report.parsedLog.timestepsObserved || null,
     timestepCount: report.parsedLog.timestepsObserved,
     cflSeries: null,
@@ -200,7 +243,7 @@ function mapParsedLogData(report: DiagnosticReport): ParsedLogData {
     errors: report.parsedLog.errors,
     solverMessages: [],
     convergencePatterns: [...report.parsedLog.warnings, ...report.parsedLog.errors],
-    missingFields: ["cflValues", "solverMessages"],
+    missingFields,
     residualSeries
   };
 }

@@ -94,6 +94,7 @@ function parseResidualSeries(logText: string): ParsedLogData["residualSeries"] {
 }
 
 function parseStructuredData(sample: SampleSolverCase): ParsedLogData {
+  const lines = sample.rawLogText.split(/\r?\n/);
   const residualSeries = parseResidualSeries(sample.rawLogText);
   const warnings = sample.rawLogText
     .split(/\r?\n/)
@@ -104,16 +105,63 @@ function parseStructuredData(sample: SampleSolverCase): ParsedLogData {
     .filter((line) => line.startsWith("Error:"))
     .map((line) => line.replace(/^Error:\s*/, ""));
 
+  const iterations =
+    sample.expectedParsedSummary.timestepsObserved > 0
+      ? [sample.expectedParsedSummary.timestepsObserved]
+      : [];
+  const missingFields = sample.rawLogText.toLowerCase().includes("courant")
+    ? ["errors", "fatalMessages", "notices", "metadata"]
+    : ["cflEntries", "errors", "fatalMessages", "notices", "metadata"];
+
   return {
     parsedAt: new Date().toISOString(),
     parserVersion: "sample-fallback-v1",
+    parserType: "generic-text-v1",
+    solverDetected: sample.solver === "OpenFOAM" ? "OpenFOAM" : "Unknown",
+    rawText: sample.rawLogText,
+    normalizedText: sample.rawLogText.replace(/\r\n?/g, "\n"),
+    lines,
+    lineCount: lines.length,
+    iterations,
+    residualEntries: residualSeries.flatMap((series) =>
+      series.samples.map((entry) => ({
+        field: series.metric,
+        iteration: entry.step,
+        rawValue: entry.rawValue,
+        value: entry.value,
+        sourceLine: `${series.metric} residual = ${entry.rawValue}`
+      }))
+    ),
+    cflEntries: sample.rawLogText.toLowerCase().includes("courant")
+      ? [{
+          metric: "CFL",
+          iteration: sample.expectedParsedSummary.timestepsObserved || null,
+          rawValue: "unavailable",
+          value: null,
+          sourceLine: "Courant number detected in sample fallback log"
+        }]
+      : [],
+    fatalMessages: [],
+    notices: [],
+    metadata: sample.solver === "OpenFOAM" ? { solver: "OpenFOAM" } : {},
+    parseCoverage: {
+      iterations: iterations.length > 0 ? "available" : "unavailable",
+      residuals: residualSeries.length > 0 ? "available" : "unavailable",
+      cfl: sample.rawLogText.toLowerCase().includes("courant") ? "available" : "unavailable",
+      warnings: warnings.length > 0 ? "available" : "unavailable",
+      errors: errors.length > 0 ? "available" : "unavailable",
+      fatalMessages: "unavailable",
+      notices: "unavailable",
+      metadata: sample.solver === "OpenFOAM" ? "available" : "unavailable",
+      status: "partial",
+      missingFields
+    },
+    unsupportedPatterns: [],
+    parseStatus: "partial",
     sourceFormat: "generic-v1",
     status: sample.expectedParsedSummary.runStatus,
-    rawLineCount: sample.rawLogText.split(/\r?\n/).length,
-    iterationNumbers:
-      sample.expectedParsedSummary.timestepsObserved > 0
-        ? [sample.expectedParsedSummary.timestepsObserved]
-        : [],
+    rawLineCount: lines.length,
+    iterationNumbers: iterations,
     lastIteration:
       sample.expectedParsedSummary.timestepsObserved > 0
         ? sample.expectedParsedSummary.timestepsObserved
@@ -129,7 +177,7 @@ function parseStructuredData(sample: SampleSolverCase): ParsedLogData {
     errors,
     solverMessages: [],
     convergencePatterns: [...warnings, ...errors],
-    missingFields: sample.rawLogText.toLowerCase().includes("courant") ? [] : ["cflValues"],
+    missingFields,
     residualSeries
   };
 }

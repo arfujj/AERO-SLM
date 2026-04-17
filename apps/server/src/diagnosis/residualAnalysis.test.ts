@@ -21,6 +21,40 @@ function buildParsedLogData(residualSeries: ResidualSeries[]): ParsedLogData {
   return {
     parsedAt: new Date().toISOString(),
     parserVersion: "test",
+    parserType: "generic-text-v1",
+    solverDetected: "Unknown",
+    rawText: "",
+    normalizedText: "",
+    lines: [],
+    lineCount: 10,
+    iterations: [1, 2, 3, 4],
+    residualEntries: residualSeries.flatMap((series) =>
+      series.samples.map((sample) => ({
+        field: series.metric,
+        iteration: sample.step,
+        rawValue: sample.rawValue,
+        value: sample.value,
+        sourceLine: `${series.metric} residual = ${sample.rawValue}`
+      }))
+    ),
+    cflEntries: [],
+    fatalMessages: [],
+    notices: [],
+    metadata: {},
+    parseCoverage: {
+      iterations: "available",
+      residuals: residualSeries.length > 0 ? "available" : "unavailable",
+      cfl: "unavailable",
+      warnings: "unavailable",
+      errors: "unavailable",
+      fatalMessages: "unavailable",
+      notices: "unavailable",
+      metadata: "unavailable",
+      status: residualSeries.length > 0 ? "partial" : "minimal",
+      missingFields: ["cflEntries", "warnings", "errors", "fatalMessages", "notices", "metadata"]
+    },
+    unsupportedPatterns: [],
+    parseStatus: "partial",
     sourceFormat: "generic-v1",
     status: "unstable",
     rawLineCount: 10,
