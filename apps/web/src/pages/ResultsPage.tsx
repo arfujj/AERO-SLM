@@ -38,7 +38,7 @@ function ReportSection({ title, subtitle, defaultOpen = true, children }: Report
           <strong>{title}</strong>
           {subtitle ? <p className="muted">{subtitle}</p> : null}
         </div>
-        <span className="muted">Toggle</span>
+        <span className="muted">Expand</span>
       </summary>
       <div className="report-section-body">{children}</div>
     </details>
@@ -387,7 +387,7 @@ export function ResultsPage() {
 
       <div className="report-grid">
         <ReportSection
-          title="Header"
+          title="Run Context"
           subtitle="Run metadata and simulation context."
         >
           <div className="meta-grid">
@@ -413,7 +413,7 @@ export function ResultsPage() {
         </ReportSection>
 
         <ReportSection
-          title="Summary Card"
+          title="Diagnosis Summary"
           subtitle="Primary issue, overall confidence, and the final next step."
         >
           <div className="report-summary-card">
@@ -454,7 +454,7 @@ export function ResultsPage() {
         </ReportSection>
 
         <ReportSection
-          title="Parsed Log Summary"
+          title="Parser Evidence"
           subtitle="Parser coverage and extracted solver-log evidence."
         >
           <div className="meta-grid">
@@ -499,7 +499,7 @@ export function ResultsPage() {
         </ReportSection>
 
         <ReportSection
-          title="Residual Trend Analysis"
+          title="Residual Analysis"
           subtitle="Convergence classifications produced from parsed residual data."
         >
           <ResidualTrendChart result={displayResult} />
@@ -570,7 +570,7 @@ export function ResultsPage() {
         </ReportSection>
 
         <ReportSection
-          title="Recommended Corrective Actions"
+          title="Corrective Actions"
           subtitle="Recommendations separated from the evidence that supports them."
         >
           <div className="card-list">
@@ -694,7 +694,7 @@ export function ResultsPage() {
         </ReportSection>
 
         <ReportSection
-          title="Footer Actions"
+          title="Report Actions"
           subtitle="Persist, restart, or export the current technical report."
         >
           <div className="button-row">

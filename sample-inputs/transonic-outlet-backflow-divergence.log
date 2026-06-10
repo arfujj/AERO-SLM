@@ -1,0 +1,89 @@
+Solver: ANSYS Fluent 2024 R2
+Case: Transonic wing-body cruise case
+Mesh cells: 4500000
+Turbulence model: k-omega SST
+Mach: 0.82
+Reynolds: 6200000
+
+Initialization completed from previous stable checkpoint.
+CFL ramp schedule: 5 -> 10 -> 18 -> 25 -> 32
+Outlet boundary: pressure outlet, farfield_outlet
+Note: Outlet is placed near wake recovery region.
+
+Time Step 1160
+CFL = 18.0
+Continuity residual = 8.2e-04
+X-momentum residual = 4.1e-05
+Y-momentum residual = 4.8e-05
+Z-momentum residual = 3.9e-05
+k residual = 2.2e-04
+omega residual = 2.9e-04
+Lift monitor = 0.4821
+Drag monitor = 0.0318
+
+Time Step 1165
+CFL = 22.0
+Continuity residual = 1.4e-03
+X-momentum residual = 6.3e-05
+Y-momentum residual = 7.1e-05
+Z-momentum residual = 5.8e-05
+k residual = 3.6e-04
+omega residual = 4.8e-04
+Lift monitor = 0.4879
+Drag monitor = 0.0324
+Warning: Reverse flow detected on 3.7% of farfield_outlet faces.
+
+Time Step 1170
+CFL = 25.0
+Continuity residual = 3.9e-03
+X-momentum residual = 1.7e-04
+Y-momentum residual = 1.9e-04
+Z-momentum residual = 1.3e-04
+k residual = 8.7e-04
+omega residual = 1.1e-03
+Lift monitor = 0.5014
+Drag monitor = 0.0341
+Warning: Outlet backflow detected on patch farfield_outlet.
+Warning: Pressure correction residual increased for 4 consecutive iterations.
+
+Time Step 1175
+CFL = 28.0
+Continuity residual = 1.2e-02
+X-momentum residual = 5.8e-04
+Y-momentum residual = 6.4e-04
+Z-momentum residual = 4.6e-04
+k residual = 2.8e-03
+omega residual = 3.7e-03
+Lift monitor = 0.5368
+Drag monitor = 0.0399
+Warning: Courant number exceeded target ramp value.
+Warning: Turbulence viscosity ratio clipped in 124 cells near wing-body junction.
+
+Time Step 1178
+CFL = 31.5
+Continuity residual = 1.8e-02
+X-momentum residual = 9.7e-04
+Y-momentum residual = 1.3e-03
+Z-momentum residual = 8.8e-04
+k residual = 4.9e-03
+omega residual = 6.5e-03
+Lift monitor = 0.5882
+Drag monitor = 0.0487
+Warning: Outlet backflow detected on patch farfield_outlet.
+Warning: AMG pressure solver limited by poor correction ratio.
+
+Time Step 1182
+CFL = 34.0
+Continuity residual = 3.1e-02
+X-momentum residual = 1.9e-03
+Y-momentum residual = 2.6e-03
+Z-momentum residual = 1.5e-03
+k residual = 5.7e-03
+omega residual = 7.2e-03
+Lift monitor = 0.6419
+Drag monitor = 0.0575
+Warning: Outlet backflow detected on patch farfield_outlet.
+Warning: Courant number exceeded target ramp value.
+Error: Solution diverging for pressure correction equation.
+Error: Floating point exception detected in AMG pressure correction.
+Run status: failed

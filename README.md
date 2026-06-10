@@ -90,6 +90,16 @@ Start both the frontend and backend:
 npm run dev
 ```
 
+By default, backend diagnosis reports and uploaded logs are persisted locally under:
+
+```text
+apps/server/data/
+  diagnoses.json
+  uploads/
+```
+
+To store runtime data elsewhere, set `AEROSLM_DATA_DIR` before starting the server.
+
 Verification commands:
 
 ```bash
@@ -103,7 +113,7 @@ npm run build --workspace @aeroslm/web
 ## What the MVP currently does
 
 - Accepts `.txt` and `.log` CFD solver logs in the browser
-- Stores run history locally in the browser and report history in memory on the server
+- Stores run history locally in the browser and persists backend reports plus uploaded logs on disk
 - Parses generic text solver logs for iterations, residuals, warnings, errors, and convergence patterns
 - Classifies residual behavior into divergence, oscillation, stagnation, or slow convergence when data supports it
 - Retrieves seeded engineering references deterministically
@@ -114,15 +124,15 @@ npm run build --workspace @aeroslm/web
 
 - The parser is still heuristic and generic; solver-specific coverage is limited
 - Retrieval is seeded and deterministic, not model-backed
-- Diagnosis history is browser-local; server report storage is in memory only
+- Diagnosis history is still browser-local; backend report and upload storage is local-disk based
 - Authentication and role-based access control are not implemented
 - The admin/debug page is intended for internal use but is not gated
 - PDF export works from the browser, but still adds a non-trivial dependency footprint
-- The backend does not yet persist uploads, runs, or citations in a database/object store
+- The backend does not yet use a managed database, object store, or multi-user tenancy model
 
 ## Recommended next engineering steps
 
-1. Add persistent storage for reports, users, uploads, and run history.
+1. Move local persisted reports/uploads into Postgres plus object storage when deployment needs it.
 2. Expand parser adapters for Fluent, OpenFOAM, SU2, and solver-specific residual formats.
 3. Move from heuristic diagnosis logic to model-backed reasoning with source citations.
 4. Add auth and internal-only protection for admin/debug tooling.

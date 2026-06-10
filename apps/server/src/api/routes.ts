@@ -20,7 +20,7 @@ import { parseLogToStructuredData, parseSolverLog } from "../parsing/solverLogPa
 import { buildRetrievalInput, retrieveEngineeringReferences } from "../retrieval/knowledgeRetriever.js";
 import { knowledgeBase } from "../sample-data/knowledgeBase.js";
 import { sampleSolverLog } from "../sample-data/sampleLog.js";
-import { getReportById, listHistory, saveReport } from "../storage/diagnosisStore.js";
+import { getSavedDiagnosisById, listHistory, saveReport } from "../storage/diagnosisStore.js";
 import {
   validateDiagnosisRequest,
   validationRuleDescriptions
@@ -53,7 +53,14 @@ apiRouter.get("/reports/:id", (request, response) => {
       }
     });
 
-    saveReport(diagnosis.report);
+    saveReport(diagnosis.report, {
+      result: diagnosis.result,
+      logFile: {
+        fileName: `${sample.id}.log`,
+        content: sample.rawLogText,
+        uploadedAt: new Date().toISOString()
+      }
+    });
     const demoPayload: ReportResponse = {
       report: diagnosis.report,
       result: diagnosis.result
@@ -63,11 +70,11 @@ apiRouter.get("/reports/:id", (request, response) => {
     return;
   }
 
-  const report = getReportById(request.params.id);
-  const payload: ReportResponse = report
+  const diagnosis = getSavedDiagnosisById(request.params.id);
+  const payload: ReportResponse = diagnosis
     ? {
-        report,
-        result: undefined
+        report: diagnosis.report,
+        result: diagnosis.result
       }
     : {
         report: null,
@@ -106,7 +113,10 @@ apiRouter.post("/diagnose", (request, response) => {
   }
 
   const diagnosis = createDiagnosticReport(payload as DiagnosePayload);
-  saveReport(diagnosis.report);
+  saveReport(diagnosis.report, {
+    result: diagnosis.result,
+    logFile: (payload as DiagnosePayload).logFile
+  });
 
   const responsePayload: DiagnoseResponse = {
     report: diagnosis.report,
@@ -203,7 +213,10 @@ apiRouter.post("/workflow/finalize", (request, response) => {
     report
   });
 
-  saveReport(report);
+  saveReport(report, {
+    result,
+    logFile: input.payload.logFile
+  });
 
   const responsePayload: DiagnoseResponse = {
     report,
